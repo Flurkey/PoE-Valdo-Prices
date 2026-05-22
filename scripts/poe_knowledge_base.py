@@ -90,7 +90,15 @@ CURATED_WIKI_TITLES = [
     "Evasion",
     "Energy shield",
     "Block",
-    "Suppression",
+    "Spell suppression",
+    "Spell block",
+    "Damage over time",
+    "Stun",
+    "Freeze",
+    "Shock",
+    "Ignite",
+    "Poison",
+    "Bleeding",
     "Leech",
     "Reservation",
     "Flask",
@@ -662,6 +670,24 @@ def load_search_documents(data_dir: Path) -> list[SearchDocument]:
                     text=" | ".join(str(part) for part in parts if part),
                 )
             )
+
+    valdo_path = data_dir / "valdo_rewards.csv"
+    if valdo_path.exists():
+        with valdo_path.open("r", encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle):
+                documents.append(
+                    SearchDocument(
+                        title=f"Valdo reward: {row['reward']}",
+                        source="valdo_rewards",
+                        url="https://www.poewiki.net/wiki/List_of_Valdo%27s_Puzzle_Box_foil_maps",
+                        text=(
+                            f"{row['reward']} appears in {row['wiki_entries']} Valdo map entries. "
+                            f"poe.ninja reward price: {row['price_display']}. "
+                            f"Listings: {row['listing_count'] or 'unknown'}. "
+                            f"Note: {row['note'] or 'none'}."
+                        ),
+                    )
+                )
     return documents
 
 
