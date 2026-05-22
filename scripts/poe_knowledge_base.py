@@ -324,7 +324,7 @@ def fetch_poe_ninja_items(league: str) -> list[dict[str, Any]]:
             continue
         core_items = {item["id"]: item for item in data.get("core", {}).get("items", [])}
         for line in data.get("lines", []):
-            item_id = line.get("item")
+            item_id = line.get("id") or line.get("item")
             item = core_items.get(item_id, {})
             items.append(
                 {
@@ -334,7 +334,7 @@ def fetch_poe_ninja_items(league: str) -> list[dict[str, Any]]:
                     "type": item_type,
                     "name": item.get("name") or item_id,
                     "details_id": item.get("detailsId"),
-                    "chaos_value": line.get("chaosEquivalent"),
+                    "chaos_value": line.get("chaosEquivalent") or line.get("primaryValue"),
                     "divine_value": line.get("divineEquivalent"),
                     "listing_count": line.get("listingCount") or line.get("count"),
                     "raw": line,
@@ -388,8 +388,10 @@ def fetch_valdo_rewards() -> Counter[str]:
 
 def chaos_per_divine(economy_items: list[dict[str, Any]]) -> float:
     for item in economy_items:
-        if item["mode"] == "exchange" and item["name"] == "Divine Orb":
-            chaos_value = item.get("chaos_value")
+        if item["mode"] == "exchange" and (
+            item["name"] == "Divine Orb" or item.get("raw", {}).get("id") == "divine"
+        ):
+            chaos_value = item.get("chaos_value") or item.get("raw", {}).get("primaryValue")
             if isinstance(chaos_value, (int, float)) and chaos_value > 0:
                 return float(chaos_value)
     # poe.ninja item values already include chaos values; this is only for display.
