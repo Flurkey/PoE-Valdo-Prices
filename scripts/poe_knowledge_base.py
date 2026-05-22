@@ -239,7 +239,9 @@ def fetch_category_members(category: str, limit: int) -> list[str]:
 
 def fetch_wiki_pages(titles: list[str]) -> list[dict[str, Any]]:
     pages: list[dict[str, Any]] = []
-    for batch in batched(titles, 20):
+    # The wiki TextExtracts API lowers whole-page extract requests to exlimit=1,
+    # so full-page extracts must be fetched one page at a time.
+    for batch in batched(titles, 1):
         data = wiki_api(
             {
                 "action": "query",
