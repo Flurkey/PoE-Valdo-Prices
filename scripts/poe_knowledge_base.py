@@ -512,9 +512,13 @@ def build_knowledge_base(args: argparse.Namespace) -> None:
     for category in CURATED_WIKI_CATEGORIES:
         category_titles.extend(fetch_category_members(category, args.category_limit))
 
-    all_titles = sorted({clean_title(title) for title in CURATED_WIKI_TITLES + category_titles})
+    curated_titles = dedupe_titles(CURATED_WIKI_TITLES)
+    expanded_titles = [title for title in dedupe_titles(category_titles) if title not in set(curated_titles)]
     if args.max_wiki_pages:
-        all_titles = all_titles[: args.max_wiki_pages]
+        remaining_slots = max(args.max_wiki_pages - len(curated_titles), 0)
+        all_titles = curated_titles + expanded_titles[:remaining_slots]
+    else:
+        all_titles = curated_titles + expanded_titles
 
     wiki_pages = fetch_wiki_pages(all_titles)
     chunks: list[dict[str, Any]] = []
@@ -602,6 +606,19 @@ def build_system_prompt(metadata: dict[str, Any]) -> str:
     )
 
 
+def dedupe_titles(titles: Iterable[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for title in titles:
+        cleaned = clean_title(title)
+        key = cleaned.lower()
+        if not cleaned or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(cleaned)
+    return deduped
+
+
 @dataclass
 class SearchDocument:
     title: str
@@ -676,6 +693,11 @@ def search_knowledge_base(args: argparse.Namespace) -> None:
             idf = math.log((document_count + 1) / (document_frequencies[token] + 1)) + 1
             score += (1 + math.log(tf)) * idf
         haystack = f"{document.title}\n{document.text}".lower()
+        title = document.title.lower()
+        if query_phrase in title:
+            score += 15
+        if all(token in tokenize(document.title) for token in query_tokens):
+            score += 8
         if query_phrase in haystack:
             score += 8
         if score > 0:
